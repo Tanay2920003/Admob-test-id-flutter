@@ -79,7 +79,11 @@ class _TestIdScreenState extends State<TestIdScreen> {
       }
 
       if (advId != null && advId.isNotEmpty) {
-        _advertisingId = advId;
+        if (advId == '00000000-0000-0000-0000-000000000000') {
+           _advertisingId = 'Restricted: 00000000-...\n\nYour Ad ID is hidden!\n1. Open Phone Settings\n2. Go to Google > Ads\n3. Tap "Reset advertising ID"\n4. Tap "Delete advertising ID" (if it was deleted)\n5. Restart this app!';
+        } else {
+          _advertisingId = advId;
+        }
       } else {
         _advertisingId = 'Could not get Advertising ID\n(Ensure Ads Personalization is enabled in Settings)';
       }
@@ -87,25 +91,33 @@ class _TestIdScreenState extends State<TestIdScreen> {
   }
 
   Widget _buildIdCard(String title, String value, String description) {
+    final isRestricted = value.contains('Restricted: 00000000');
+    final displayValue = isRestricted ? value : value;
+    
     return Card(
       elevation: 4,
       margin: const EdgeInsets.symmetric(vertical: 10),
+      color: isRestricted ? Colors.red.shade50 : null,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isRestricted ? Colors.red.shade800 : null)),
             const SizedBox(height: 5),
             Text(description, style: const TextStyle(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center),
             const SizedBox(height: 15),
             SelectableText(
-              value,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue),
+              displayValue,
+              style: TextStyle(
+                fontSize: isRestricted ? 16 : 18, 
+                fontWeight: FontWeight.bold, 
+                color: isRestricted ? Colors.red.shade700 : Colors.blue
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 15),
             ElevatedButton.icon(
-              onPressed: value.length > 10 && !value.contains('Could not') ? () {
+              onPressed: value.length > 10 && !value.contains('Could not') && !isRestricted ? () {
                 Clipboard.setData(ClipboardData(text: value));
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Copied to clipboard!')),
@@ -126,6 +138,19 @@ class _TestIdScreenState extends State<TestIdScreen> {
       appBar: AppBar(
         title: const Text('AdMob Test Device IDs'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+               setState(() {
+                 _advertisingId = 'Fetching...';
+                 _testId = 'Fetching...';
+               });
+               _fetchIds();
+            },
+            tooltip: 'Refresh IDs',
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Padding(
